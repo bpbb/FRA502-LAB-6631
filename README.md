@@ -129,14 +129,14 @@ Download the README.md file then fill your command for run all node when TA test
    git clone -b LAB3 https://github.com/bpbb/FRA502-LAB-6631.git
     ```
 
-3. **Build and source the workspace**:
+2. **Build and source the workspace**:
    ```bash
    cd FRA502-LAB-6631
    colcon build
    source install/setup.bash
     ```
 
-2. **Run all nodes** (replace `StudentID` with your own ID):
+3. **Run all nodes** (replace `StudentID` with your own ID):
    ```bash
   ros2 launch lab3 lab3_bringup.launch.py
    ```
