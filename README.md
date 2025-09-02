@@ -136,7 +136,7 @@ Download the README.md file then fill your command for run all node when TA test
    source install/setup.bash
     ```
 
-3. **Run all nodes** (replace `StudentID` with your own ID):
+3. **Launch all nodes**:
    ```bash
-  ros2 launch lab3 lab3_bringup.launch.py
+   ros2 launch lab3 lab3_bringup.launch.py
    ```
