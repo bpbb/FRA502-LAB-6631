@@ -1,0 +1,9 @@
+# Request: Mode change
+string mode_name  # Options: "IK", "TO_F", "TO_G", "AM"
+geometry_msgs/PoseStamped target_pose  # Used only for IK mode
+
+---
+# Response
+bool success
+string message
+sensor_msgs/JointState configuration_solution  # IK solution (if mode=IK and success=True)

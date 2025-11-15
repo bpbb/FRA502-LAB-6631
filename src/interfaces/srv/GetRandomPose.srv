@@ -1,0 +1,7 @@
+# Request: Trigger for new random pose
+bool trigger  # Set to True to request new pose
+
+---
+# Response
+geometry_msgs/PoseStamped target_pose
+bool success

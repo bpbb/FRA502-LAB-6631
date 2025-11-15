@@ -1,0 +1,6 @@
+# Request: Confirmation that robot reached target
+bool arrived_at_target
+
+---
+# Response
+bool acknowledged
