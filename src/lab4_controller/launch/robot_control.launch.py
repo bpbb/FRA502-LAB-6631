@@ -73,12 +73,12 @@ def generate_launch_description():
     )
     
     # Teleop keyboard node (optional - start separately)
-    # teleop_node = Node(
-    #     package='lab4_controller',
-    #     executable='teleop_jog_keyboard.py',
-    #     name='teleop_keyboard',
-    #     output='screen'
-    # )
+    teleop_node = Node(
+        package='lab4_controller',
+        executable='teleop_jog_keyboard.py',
+        name='teleop_keyboard',
+        output='screen'
+    )
     
     # Joint state publisher GUI (optional)
     joint_state_publisher_gui = Node(
@@ -95,5 +95,6 @@ def generate_launch_description():
         robot_scheduler_node,
         controller_node,
         random_node,
+        teleop_node,
         joint_state_publisher_gui,
     ])

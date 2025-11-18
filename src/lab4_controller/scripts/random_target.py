@@ -3,14 +3,17 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
-from interfaces.srv import GetRandomPose, SendArrivalConfirmation
+from interfaces.srv import GetRandomPose
 from std_msgs.msg import String
 
 import random
 import numpy as np
 from math import pi, sqrt, sin, cos
 
-# --- Kinematic Parameters (Must match controller/scheduler/URDF) ---
+import roboticstoolbox as rtb
+from spatialmath import SE3
+
+
 L1 = 0.20  # Base height (d1)
 L2 = 0.25  # Shoulder-elbow length (a2)
 L3 = 0.28  # Elbow-end effector length (a3)
@@ -28,13 +31,6 @@ class RandomPoseGenerator(Node):
             GetRandomPose, "get_random_pose", self.random_pose_service_callback
         )
 
-        # Service Server to receive arrival confirmation (optional)
-        self.arrival_server = self.create_service(
-            SendArrivalConfirmation,
-            "send_arrival_confirmation",
-            self.arrival_confirmation_callback,
-        )
-
         # Subscribe to /current_state to know when we are in AM mode
         self.current_state = "IDLE"
         self.state_sub = self.create_subscription(
@@ -46,181 +42,248 @@ class RandomPoseGenerator(Node):
         self.generation_attempts = 0
         self.max_attempts = 100
 
-        # --- Workspace bounds (must match controller/scheduler) ---
-        # r_min = |L2 - L3|, r_max = L2 + L3
-        self.r_min = abs(L2 - L3)
-        self.r_max = L2 + L3
+        # Workspace bounds
+        self.r_min = abs(L2 - L3)  # 0.03m
+        self.r_max = L2 + L3  # 0.53m
 
-        # Initial dummy target (won't be used until AM mode)
-        self._generate_random_pose()
-
-        # Timer to periodically publish the current target (for RViz)
-        self.create_timer(1.0, self.timer_callback)
-
-        self.get_logger().info("Random Pose Generator Node has been started.")
-        self.get_logger().info(
-            f"Workspace sphere: center z={L1:.3f}, "
-            f"r_min={self.r_min:.3f}, r_max={self.r_max:.3f}"
+        # Ground collision parameters
+        self.ground_level = 0.02
+        self.safety_margin = 0.001
+        
+        # Robot model for IK checking
+        self.robot = rtb.DHRobot(
+            [
+                rtb.RevoluteMDH(alpha=0.0, a=0.0, d=L1, offset=0.0),
+                rtb.RevoluteMDH(alpha=pi/2, a=0.0, d=0.02, offset=0.0),
+                rtb.RevoluteMDH(alpha=0.0, a=L2, d=0.0, offset=0.0),
+            ],
+            tool=SE3.Tx(L3),
+            name="RRR_Robot",
         )
 
-    # ======================
-    #  Callbacks
-    # ======================
+        # Initial dummy target
+        self._generate_random_pose()
+
+        # Timer to periodically publish the current target
+        self.create_timer(0.01, self.timer_callback)
 
     def state_callback(self, msg: String):
-        """Subscribe to /current_state from scheduler."""
         self.current_state = msg.data
-        # Use debug to avoid spam
-        self.get_logger().debug(f"[RandomNode] current_state = {self.current_state}")
 
-    def random_pose_service_callback(
-        self,
-        request: GetRandomPose.Request,
-        response: GetRandomPose.Response,
-    ):
-        """
-        Service callback for Auto Mode.
-        Only responds with a new random pose when state == 'AM'.
-        """
+    def random_pose_service_callback(self, request: GetRandomPose.Request, response: GetRandomPose.Response):
         if self.current_state != "AM":
             self.get_logger().warn(
-                f"Random pose requested but current_state = '{self.current_state}', "
-                "not 'AM'. No new target will be generated."
+                f"Random pose requested but state={self.current_state}, not AM"
             )
             response.success = False
-            # Optionally still return the last pose
             response.target_pose = self.current_random_pose
             return response
 
-        self.get_logger().info("Received request for a new random pose in AM mode.")
+        self.get_logger().info("Generating new random pose for AM mode...")
 
-        # 1. Generate a new random pose
+        # Generate new random pose (with all safety checks)
         new_pose = self._generate_random_pose()
 
-        # 2. Publish immediately (for RViz visualization)
+        # Publish for RViz
         self.target_pub.publish(new_pose)
 
-        # 3. Fill the Service Response
+        # Fill response
         response.target_pose = new_pose
         response.success = True
 
         self.get_logger().info(
-            f"New target generated in {self.generation_attempts} attempts: "
-            f"({new_pose.pose.position.x:.3f}, "
+            f"Target generated: "
+            f"[{new_pose.pose.position.x:.3f}, "
             f"{new_pose.pose.position.y:.3f}, "
-            f"{new_pose.pose.position.z:.3f})"
+            f"{new_pose.pose.position.z:.3f}]"
         )
 
         return response
 
-    def arrival_confirmation_callback(
-        self,
-        request: SendArrivalConfirmation.Request,
-        response: SendArrivalConfirmation.Response,
-    ):
-        """Optional callback for controller arrival confirmation."""
-        if request.arrived_at_target:
-            self.get_logger().info("Robot confirmed arrival at target.")
-        response.acknowledged = True
-        return response
-
     def timer_callback(self):
-        """
-        Periodically publishes the current target pose,
-        but ONLY when the state is AM.
-        """
         if self.current_state == "AM":
-            # Only publish when we are in Auto Mode
             if self.current_random_pose.header.stamp.sec != 0:
                 self.current_random_pose.header.stamp = self.get_clock().now().to_msg()
                 self.target_pub.publish(self.current_random_pose)
-        else:
-            # Not in AM → do nothing
-            pass
-
-    # ======================
-    #  Workspace & Sampling
-    # ======================
 
     def _is_in_workspace(self, x: float, y: float, z: float) -> bool:
-        """
-        Same workspace check as controller/scheduler:
-
-        distance_squared = x^2 + y^2 + (z - L1)^2
-        r_min <= distance <= r_max
-        """
+        
         distance_squared = x**2 + y**2 + (z - L1) ** 2
         distance = np.sqrt(distance_squared)
 
-        if distance_squared < self.r_min**2:
-            self.get_logger().debug(
-                f"Target too close: distance={distance:.3f} < r_min={self.r_min:.3f}"
-            )
+        # Check distance bounds with conservative margins (3cm)
+        margin = 0.03
+        if distance < (self.r_min + margin):
+            return False
+            
+        if distance > (self.r_max - margin):
             return False
 
-        if distance_squared > self.r_max**2:
-            self.get_logger().debug(
-                f"Target too far: distance={distance:.3f} > r_max={self.r_max:.3f}"
-            )
-            return False
-
-        # Optional: avoid near-axis singularity
+        # Avoid near-axis singularity (8cm radius for safety)
         R = np.sqrt(x**2 + y**2)
-        if R < 0.05:
-            self.get_logger().debug(
-                f"Target too close to Z-axis (R={R:.3f} < 0.05), reject."
-            )
+        if R < 0.08:
+            return False
+        
+        # Minimum z height (well above ground)
+        if z < 0.05:
+            return False
+        
+        # Maximum z height (avoid overhead configurations)
+        if z > 0.8:
             return False
 
         return True
 
-    def _generate_random_pose(self) -> PoseStamped:
-        """
-        Generates a random (X, Y, Z) position within the spherical workspace.
+    def _is_reachable_and_safe(self, x: float, y: float, z: float) -> bool:
+        try:
+            # Test multiple initial guesses to find different IK solutions
+            initial_guesses = [
+                [0, 0, 0],           # Home position
+                [0, pi/4, -pi/4],    # Safe mid-range
+                [pi/2, pi/4, 0],     # Side approach
+                [-pi/2, pi/4, 0],    # Other side
+                [0, pi/6, -pi/6],    # Slightly elevated
+            ]
+            
+            T_target = SE3(x, y, z)
+            pos_target = np.array([x, y, z])
+            safe_solutions_found = 0
+            
+            for q0 in initial_guesses:
+                ik_solution = self.robot.ikine_LM(
+                    T_target, 
+                    mask=[1, 1, 1, 0, 0, 0], 
+                    joint_limits=False, 
+                    q0=q0
+                )
+                
+                # Skip if IK failed
+                if not ik_solution.success:
+                    continue
+                
+                # Check IK residual error (must be < 1mm)
+                if hasattr(ik_solution, 'residual'):
+                    if ik_solution.residual > 0.001:  # 1mm
+                        continue  # Solution not accurate enough
+                
+                q = ik_solution.q
+                
+                # Verify FK actually reaches target (double-check)
+                T_check = self.robot.fkine(q)
+                pos_check = T_check.t
+                position_error = np.linalg.norm(pos_check - pos_target)
+                
+                if position_error > 0.002:  # 2mm tolerance
+                    continue  # FK doesn't match target
+                
+                # Check ground collision for this solution
+                # Link2 position
+                T1 = self.robot.fkine([q[0], q[1], 0])
+                link2_z = T1.t[2]
+                
+                # Link3 position (use verified FK result)
+                link3_z = pos_check[2]
+                
+                # Safety threshold
+                threshold = self.ground_level + self.safety_margin
+                
+                # Check this solution is safe
+                if link2_z >= threshold and link3_z >= threshold:
+                    safe_solutions_found += 1
+            
+            # Require at least one safe solution
+            return safe_solutions_found > 0
+            
+        except Exception as e:
+            return False
 
-        1. Sample distance d in [r_min, r_max]
-        2. Sample angles theta, phi
-        3. Convert to Cartesian relative to shoulder
-        4. Shift by L1 in z
-        5. Reject until _is_in_workspace() is satisfied
-        """
+    def _generate_random_pose(self) -> PoseStamped:
+
         x = y = z = 0.0
         is_valid = False
         attempts = 0
+        
+        # Statistics for debugging
+        workspace_fails = 0
+        reachability_fails = 0
 
         while not is_valid and attempts < self.max_attempts:
             attempts += 1
 
-            # Distance from shoulder
-            d = sqrt(random.uniform(self.r_min**2, self.r_max**2))
-
-            # Theta: angle from +Z axis (0..pi)
-            theta = random.uniform(0.0, pi)
-            # Phi: azimuth around Z axis (-pi..pi)
+            # Step 1: Generate random spherical coordinates
+            d = sqrt(random.uniform((self.r_min + 0.05)**2, (self.r_max - 0.05)**2))
+        
+            if random.random() < 0.7:
+                theta = random.uniform(0.0, pi * 0.6)
+            else:
+                theta = random.uniform(pi * 0.6, pi * 0.9)
+            
             phi = random.uniform(-pi, pi)
 
-            # Convert spherical -> Cartesian (shoulder frame)
+            # Step 2: Convert to Cartesian
             R = d * sin(theta)
             z_rel = d * cos(theta)
-
             x = R * cos(phi)
             y = R * sin(phi)
             z = z_rel + L1
 
-            if self._is_in_workspace(x, y, z):
-                is_valid = True
+            # Step 3: Check workspace bounds and singularity
+            if not self._is_in_workspace(x, y, z):
+                workspace_fails += 1
+                continue
+            
+            # Step 4: Check IK reachability and ground collision
+            if not self._is_reachable_and_safe(x, y, z):
+                reachability_fails += 1
+                continue
+            
+            # All checks passed!
+            is_valid = True
 
+        # Log statistics
         if not is_valid:
             self.get_logger().warn(
-                f"Failed to generate valid point after {attempts} attempts. "
-                "Using safe default (0.3, 0.2, 0.3)."
+                f"Failed after {attempts} attempts. "
+                f"Workspace: {workspace_fails}, Reachability: {reachability_fails}. "
+                f"Using validated safe default..."
             )
-            x, y, z = 0.3, 0.2, 0.3
+            
+            # Try validated safe positions (all in upper hemisphere, well above ground)
+            safe_candidates = [
+                (0.30, 0.20, 0.30),  # Front-right, mid-height
+                (0.35, 0.00, 0.30),  # Front center
+                (0.25, 0.20, 0.35),  # Front-right, higher
+                (0.40, 0.00, 0.28),  # Further front
+                (0.30, -0.20, 0.30), # Front-left
+                (0.20, 0.25, 0.35),  # Side, higher
+                (0.35, 0.15, 0.32),  # Diagonal
+            ]
+            
+            for candidate in safe_candidates:
+                x_test, y_test, z_test = candidate
+                if self._is_in_workspace(x_test, y_test, z_test) and \
+                   self._is_reachable_and_safe(x_test, y_test, z_test):
+                    x, y, z = x_test, y_test, z_test
+                    is_valid = True
+                    self.get_logger().info(f"Using validated safe default: [{x:.3f}, {y:.3f}, {z:.3f}]")
+                    break
+            
+            if not is_valid:
+                # Last resort - use first candidate without full validation
+                x, y, z = safe_candidates[0]
+                self.get_logger().error(
+                    "Could not validate any safe default! Using [0.3, 0.2, 0.3] without full check."
+                )
+        else:
+            if attempts > 20:
+                self.get_logger().info(
+                    f"Generated valid pose after {attempts} attempts. "
+                    f"(Workspace fails: {workspace_fails}, Reachability fails: {reachability_fails})"
+                )
 
         # Build PoseStamped
         msg = PoseStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
-        # IMPORTANT: match controller frame
         msg.header.frame_id = "link_0"
 
         msg.pose.position.x = x
@@ -243,7 +306,7 @@ def main(args=None):
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
-        node.get_logger().info("Shutting down Random Pose Generator...")
+        node.get_logger().info("Shutting down...")
     finally:
         node.destroy_node()
         rclpy.shutdown()

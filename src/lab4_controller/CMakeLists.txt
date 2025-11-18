@@ -32,6 +32,7 @@ install(PROGRAMS
   scripts/random_target.py
   scripts/teleop_jog_keyboard.py
   scripts/scheduler.py
+  scripts/workspace.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

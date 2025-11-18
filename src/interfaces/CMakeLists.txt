@@ -30,7 +30,6 @@ endif()
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SetControlMode.srv"
   "srv/GetRandomPose.srv"
-  "srv/SendArrivalConfirmation.srv"
   DEPENDENCIES
     std_msgs
     geometry_msgs

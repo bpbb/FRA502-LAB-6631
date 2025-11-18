@@ -63,36 +63,40 @@ class TeleopKeyboard(Node):
     def print_instructions(self):
         """Print usage instructions to terminal."""
         msg = """
-╔════════════════════════════════════════════════════════════╗
-║         3R Robot Teleoperation Keyboard Control           ║
-╠════════════════════════════════════════════════════════════╣
-║                                                            ║
-║  Movement Controls (End-Effector Velocity):                ║
-║  ─────────────────────────────────────────────             ║
-║      W: Forward (+X)       Q: Up (+Z)                      ║
-║      S: Backward (-X)      E: Down (-Z)                    ║
-║      A: Left (+Y)                                          ║
-║      D: Right (-Y)                                         ║
-║                                                            ║
-║  Combined Motions:                                         ║
-║  ─────────────────────────────────────────────             ║
-║      R: Forward-Left       T: Forward-Right                ║
-║      F: Backward-Left      G: Backward-Right               ║
-║                                                            ║
-║  Speed Control:                                            ║
-║  ─────────────────────────────────────────────             ║
-║      +/=: Increase speed by 10%                            ║
-║      -/_: Decrease speed by 10%                            ║
-║                                                            ║
-║  Other:                                                    ║
-║  ─────────────────────────────────────────────             ║
-║      SPACE: Stop all motion                                ║
-║      Ctrl+C: Exit                                          ║
-║                                                            ║
-║  Current Speed: {:.3f} m/s                              ║
-╚════════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════╗
+║         3R Robot Teleoperation Keyboard Control         ║
+╠══════════════════════════════════════════════════════════╣
+║                                                          ║
+║  Movement Controls (End-Effector Velocity):              ║
+║  ───────────────────────────────────────────────────     ║
+║      W: Forward (+X)       Q: Up (+Z)                    ║
+║      S: Backward (-X)      E: Down (-Z)                  ║
+║      A: Left (+Y)                                        ║
+║      D: Right (-Y)                                       ║
+║                                                          ║
+║  Combined Motions:                                       ║
+║  ───────────────────────────────────────────────────     ║
+║      R: Forward-Left       T: Forward-Right              ║
+║      F: Backward-Left      G: Backward-Right             ║
+║                                                          ║
+║  Speed Control:                                          ║
+║  ───────────────────────────────────────────────────     ║
+║      +/=: Increase speed by 10%                          ║
+║      -/_: Decrease speed by 10%                          ║
+║                                                          ║
+║  Other:                                                  ║
+║  ───────────────────────────────────────────────────     ║
+║      SPACE: Stop all motion                              ║
+║      Ctrl+C: Exit                                        ║
+║                                                          ║
+║  Current Speed: {:.3f} m/s                            ║
+╚══════════════════════════════════════════════════════════╝
         """.format(self.linear_speed)
         print(msg)
+        print("NOTE: Make sure you activate TO_F or TO_G mode in scheduler first!")
+        print("      TO_F = End-Effector Frame")
+        print("      TO_G = Global/World Frame")
+        print("="*60)
         
     def get_key(self, timeout=0.1):
         """
