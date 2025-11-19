@@ -50,17 +50,17 @@ This README explains the architecture, how to run the system, and how each compo
 ### Part 2: Control Modes
 
 #### **IK Mode (Inverse Kinematics)**
-* ✓ Return success/failure + configuration solution.
-* ✓ Use IK to verify reachability, then **resolved-rate control** moves the arm.
+* Return success/failure + configuration solution.
+* Use IK to verify reachability, then **resolved-rate control** moves the arm.
 
 #### **Teleoperation Mode (TO\_F, TO\_G)**
-* ✓ Control in **End-effector frame** or **global frame**.
-* ✓ **Singularity detection** + emergency stop + topic notification.
+* Control in **End-effector frame** or **global frame**.
+* **Singularity detection** + emergency stop + topic notification.
 
 #### **Auto Mode (AM)**
-* ✓ Request random pose.
-* ✓ Must reach target within **10 seconds**.
-* ✓ Sends **"TARGET\_REACHED"** for next random pose.
+* Request random pose.
+* Must reach target within **10 seconds**.
+* Sends **"TARGET\_REACHED"** for next random pose.
 
 ### Part 3: Documentation
 * Documentation (this README) + architecture + instructions to run.
@@ -99,10 +99,12 @@ source install/setup.bash
 
 ### Run the full system
 
+**Terminal 1:**
 ```bash
 ros2 launch lab4_controller robot_control.launch.py
 ```
 
+**Terminal 2:**
 ```bash
 ros2 run lab4_controller teleop_jog_keyboard.py
 ```
@@ -130,7 +132,7 @@ Acts as the **safe baseline** and fallback state after finishing tasks or encoun
 
 ### IK Mode (Inverse Kinematics Mode)
 
-#### **Purpose (LAB4 Requirement)**
+#### **Purpose (LAB Requirement)**
 - Accept a desired end-effector position  
 - Attempt to solve IK  
 - If **solvable → robot must move**  
@@ -222,7 +224,7 @@ Two teleoperation modes:
 - **TO_F** — end-effector frame  
 - **TO_G** — global/world frame  
 
-#### **Purpose (LAB4 Requirement)**
+#### **Purpose (LAB Requirement)**
 - Control robot using keyboard  
 - Receive velocity commands via `/cmd_vel`  
 - Switch between **global frame** and **EE frame** motion  
