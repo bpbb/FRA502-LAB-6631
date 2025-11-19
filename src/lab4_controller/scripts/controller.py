@@ -35,7 +35,7 @@ class ControllerNode(Node):
         self.status_pub = self.create_publisher(String, "/controller_status", 10)
 
         # Teleoperation velocity input
-        self.create_subscription(Twist, "cmd_vel", self.cmd_vel_callback, 10)
+        self.create_subscription(Twist, "/cmd_vel", self.cmd_vel_callback, 10)
         self.tele_x = 0.0
         self.tele_y = 0.0
         self.tele_z = 0.0

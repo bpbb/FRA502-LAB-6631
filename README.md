@@ -18,6 +18,10 @@ This README explains the architecture, how to run the system, and how each compo
 | **teleop\_jog\_keyboard** | Publishes `/cmd_vel` for teleoperation |
 | **workspace.py** | Computes theoretical workspace + visual verification |
 
+### System Architecture
+
+![System Architecture](/home/b/Documents/GitHub/FRA502-LAB-6631/system_architecture.png)
+
 ### Main Topics
 
 * `/cmd_vel` — teleoperation command (**Twist**)
@@ -99,6 +103,10 @@ source install/setup.bash
 ros2 launch lab4_controller robot_control.launch.py
 ```
 
+```bash
+ros2 run lab4_controller teleop_jog_keyboard.py
+```
+
 ---
 
 ## Behavior of Each Mode
@@ -160,6 +168,38 @@ If IK fails:
 response.success = False
 ```
 → Robot must stay at its current configuration.
+
+For example,
+
+1) IK succeeds
+```bash
+ros2 service call /set_control_mode interfaces/srv/SetControlMode "{mode_name: 'IK',
+  target_pose: {
+    header: {frame_id: 'link_0'},
+    pose: {position: {x: 0.3, y: 0.1, z: 0.3}}
+  }}"
+```
+Result:
+```
+response:
+interfaces.srv.SetControlMode_Response(success=True, message='IK solution found. Robot moving to target.', configuration_solution=sensor_msgs.msg.JointState(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), name=['joint_1', 'joint_2', 'joint_3'], position=[0.38503838262756407, -0.6622210993373332, 1.796273593445921], velocity=[], effort=[]))
+
+```
+
+2) IK fails
+```bash
+ros2 service call /set_control_mode interfaces/srv/SetControlMode \
+"{mode_name: 'IK',
+  target_pose: {
+    header: {frame_id: 'link_0'},
+    pose: {position: {x: 0.15, y: 0.1, z: 0.2}}
+  }}"
+```
+Result:
+```
+response:
+interfaces.srv.SetControlMode_Response(success=False, message='IK solution NOT found. Robot remains in current state.', configuration_solution=sensor_msgs.msg.JointState(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), name=[], position=[], velocity=[], effort=[]))
+```
 
 **Step 4 — Movement Execution (Resolved-Rate Control)**
 
@@ -245,5 +285,7 @@ The random node uniformly samples `(x, y, z)` and ensures:
 Run workspace visualization:
 ```bash
 ros2 run lab4_controller workspace.py
-
 ```
+![Robot Workspace](/home/b/Documents/GitHub/FRA502-LAB-6631/3R_workspace.png)
+
+

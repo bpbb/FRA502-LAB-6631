@@ -49,9 +49,7 @@ class TeleopKeyboard(Node):
         # Speed control
         self.speed_bindings = {
             '+': 1.1,  # Increase speed by 10%
-            '=': 1.1,  # Increase speed by 10% (no shift needed)
             '-': 0.9,  # Decrease speed by 10%
-            '_': 0.9,  # Decrease speed by 10%
         }
         
         # Store terminal settings
@@ -63,35 +61,29 @@ class TeleopKeyboard(Node):
     def print_instructions(self):
         """Print usage instructions to terminal."""
         msg = """
-╔══════════════════════════════════════════════════════════╗
-║         3R Robot Teleoperation Keyboard Control         ║
-╠══════════════════════════════════════════════════════════╣
-║                                                          ║
-║  Movement Controls (End-Effector Velocity):              ║
-║  ───────────────────────────────────────────────────     ║
-║      W: Forward (+X)       Q: Up (+Z)                    ║
-║      S: Backward (-X)      E: Down (-Z)                  ║
-║      A: Left (+Y)                                        ║
-║      D: Right (-Y)                                       ║
-║                                                          ║
-║  Combined Motions:                                       ║
-║  ───────────────────────────────────────────────────     ║
-║      R: Forward-Left       T: Forward-Right              ║
-║      F: Backward-Left      G: Backward-Right             ║
-║                                                          ║
-║  Speed Control:                                          ║
-║  ───────────────────────────────────────────────────     ║
-║      +/=: Increase speed by 10%                          ║
-║      -/_: Decrease speed by 10%                          ║
-║                                                          ║
-║  Other:                                                  ║
-║  ───────────────────────────────────────────────────     ║
-║      SPACE: Stop all motion                              ║
-║      Ctrl+C: Exit                                        ║
-║                                                          ║
-║  Current Speed: {:.3f} m/s                            ║
-╚══════════════════════════════════════════════════════════╝
-        """.format(self.linear_speed)
+
+3R Robot Teleoperation Keyboard Control      
+---------------------------------------------------   
+  Movement Controls (End-Effector Velocity):             
+    W: Forward (+X)       Q: Up (+Z)                   
+    S: Backward (-X)      E: Down (-Z)                  
+    A: Left (+Y)                                        
+    D: Right (-Y)                                       
+---------------------------------------------------                                                             
+  Combined Motions:                                       
+    R: Forward-Left       T: Forward-Right              
+    F: Backward-Left      G: Backward-Right             
+---------------------------------------------------                                                             
+  Speed Control:                                          
+    +: Increase speed by 10%                          
+    -: Decrease speed by 10%                          
+---------------------------------------------------                                                             
+  Other:                                                 
+    SPACE: Stop all motion                             
+    Ctrl+C: Exit                                       
+---------------------------------------------------                                                            
+  Current Speed: {:.3f} m/s                           
+    """.format(self.linear_speed)
         print(msg)
         print("NOTE: Make sure you activate TO_F or TO_G mode in scheduler first!")
         print("      TO_F = End-Effector Frame")
@@ -99,15 +91,7 @@ class TeleopKeyboard(Node):
         print("="*60)
         
     def get_key(self, timeout=0.1):
-        """
-        Get keyboard input with timeout.
-        
-        Args:
-            timeout: Time to wait for input (seconds)
-            
-        Returns:
-            str: Pressed key or None if timeout
-        """
+
         tty.setraw(sys.stdin.fileno())
         rlist, _, _ = select.select([sys.stdin], [], [], timeout)
         if rlist:
@@ -119,12 +103,7 @@ class TeleopKeyboard(Node):
         return None
     
     def publish_velocity(self, linear_x, linear_y, linear_z):
-        """
-        Publish Twist message with specified velocities.
-        
-        Args:
-            linear_x, linear_y, linear_z: Linear velocity components
-        """
+
         msg = Twist()
         msg.linear.x = linear_x * self.linear_speed
         msg.linear.y = linear_y * self.linear_speed
@@ -136,12 +115,11 @@ class TeleopKeyboard(Node):
         self.cmd_vel_pub.publish(msg)
         
     def publish_stop(self):
-        """Publish zero velocity to stop the robot."""
         msg = Twist()
         self.cmd_vel_pub.publish(msg)
         
     def run(self):
-        """Main loop for keyboard teleoperation."""
+
         try:
             while True:
                 key = self.get_key()

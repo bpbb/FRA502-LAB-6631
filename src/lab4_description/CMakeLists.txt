@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(lab4_controller)
+project(lab4_description)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -28,14 +28,8 @@ ament_python_install_package(${PROJECT_NAME})
 # Install Python executables
 install(PROGRAMS
   scripts/dummy_script.py
-  scripts/controller.py
-  scripts/random_target.py
-  scripts/teleop_jog_keyboard.py
-  scripts/scheduler.py
-  scripts/workspace.py
   DESTINATION lib/${PROJECT_NAME}
 )
-
 
 
 # Include Cpp "include" directory
@@ -56,6 +50,8 @@ install(DIRECTORY
   # add directories here
   launch
   rviz
+  urdf
+  meshes
   DESTINATION share/${PROJECT_NAME})
 
 ament_package()

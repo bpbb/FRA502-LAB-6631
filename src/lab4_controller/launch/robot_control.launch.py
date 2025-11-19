@@ -9,9 +9,6 @@ import xacro
 
 
 def generate_launch_description():
-    """
-    Launch file for Lab 4: 3R Robot Control System (3-node architecture)
-    """
     
     # Declare arguments
     use_gui_arg = DeclareLaunchArgument(
@@ -25,9 +22,10 @@ def generate_launch_description():
     
     # Package name
     pkg = get_package_share_directory("lab4_controller")
+    pkg_urdf = get_package_share_directory("lab4_description")
     
     # RVIZ configuration
-    rviz_path = os.path.join(pkg, "rviz", "config_rviz.rviz")
+    rviz_path = os.path.join(pkg, "rviz", "config.rviz")
     rviz = Node(
         package="rviz2",
         executable="rviz2",
@@ -37,7 +35,7 @@ def generate_launch_description():
     )
     
     # Robot description from XACRO
-    path_description = os.path.join(pkg, "urdf", "my-robot.xacro")
+    path_description = os.path.join(pkg_urdf, "urdf", "my-robot.xacro")
     robot_desc_xml = xacro.process_file(path_description).toxml()
     
     parameters = [{"robot_description": robot_desc_xml}]
@@ -72,14 +70,6 @@ def generate_launch_description():
         output='screen'
     )
     
-    # Teleop keyboard node (optional - start separately)
-    teleop_node = Node(
-        package='lab4_controller',
-        executable='teleop_jog_keyboard.py',
-        name='teleop_keyboard',
-        output='screen'
-    )
-    
     # Joint state publisher GUI (optional)
     joint_state_publisher_gui = Node(
         package='joint_state_publisher_gui',
@@ -95,6 +85,5 @@ def generate_launch_description():
         robot_scheduler_node,
         controller_node,
         random_node,
-        teleop_node,
         joint_state_publisher_gui,
     ])
