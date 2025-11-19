@@ -20,7 +20,7 @@ This README explains the architecture, how to run the system, and how each compo
 
 ### System Architecture
 
-![System Architecture](/home/b/Documents/GitHub/FRA502-LAB-6631/system_architecture.png)
+![System Architecture](system_architecture.png)
 
 ### Main Topics
 
@@ -286,6 +286,6 @@ Run workspace visualization:
 ```bash
 ros2 run lab4_controller workspace.py
 ```
-![Robot Workspace](/home/b/Documents/GitHub/FRA502-LAB-6631/3R_workspace.png)
+![Robot Workspace](3R_workspace.png)
 
 
