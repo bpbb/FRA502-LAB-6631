@@ -14,10 +14,6 @@ import tty
 import select
 
 class TeleopKeyboard(Node):
-    """
-    Node for keyboard teleoperation of the 3R robot.
-    Controls End-Effector velocity through keyboard inputs.
-    """
     
     def __init__(self):
         super().__init__('teleop_keyboard')
