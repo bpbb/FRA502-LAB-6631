@@ -92,7 +92,7 @@ git clone -b LAB4 https://github.com/bpbb/FRA502-LAB-6631.git
 ### Build the ROS2 workspace
 
 ```bash
-cd LAB4
+cd FRA502-LAB-6631
 colcon build
 source install/setup.bash
 ```
@@ -194,7 +194,7 @@ ros2 service call /set_control_mode interfaces/srv/SetControlMode \
 "{mode_name: 'IK',
   target_pose: {
     header: {frame_id: 'link_0'},
-    pose: {position: {x: 0.15, y: 0.1, z: 0.2}}
+    pose: {position: {x: 0.15, y: 0.1, z: 0.8}}
   }}"
 ```
 Result:
@@ -234,12 +234,12 @@ Two teleoperation modes:
 
 **End-effector frame:**
 ```bash
-ros2 service call /set_control_mode "{mode_name: 'TO_F'}"
+ros2 service call /set_control_mode interfaces/srv/SetControlMode \ "{mode_name: 'TO_F'}"
 ```
 
 **Global frame:**
 ```bash
-ros2 service call /set_control_mode "{mode_name: 'TO_G'}"
+ros2 service call /set_control_mode interfaces/srv/SetControlMode \ "{mode_name: 'TO_G'}"
 ```
 
 #### **Singularity Detection**
@@ -267,7 +267,7 @@ This fully satisfies the LAB4 **safety + reporting** requirements.
 
 #### **User Command**
 ```bash
-ros2 service call /set_control_mode "{mode_name: 'AM'}"
+ros2 service call /set_control_mode interfaces/srv/SetControlMode \ "{mode_name: 'AM'}"
 ```
 
 ### **Random Node Behavior**

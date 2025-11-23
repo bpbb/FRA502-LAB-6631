@@ -80,7 +80,7 @@ class ControllerNode(Node):
         self.movement_started = False
 
         # Singularity detection
-        self.singularity_epsilon = 0.01
+        self.singularity_epsilon = 0.001
         self.near_singularity = False
 
         # Joint state publisher
@@ -243,7 +243,7 @@ class ControllerNode(Node):
         msg = String()
         msg.data = "WARNING: Approaching Singularity - Robot Stopped"
         self.singularity_pub.publish(msg)
-        self.get_logger().warn("⚠️ SINGULARITY WARNING: Robot stopped to avoid singularity")
+        self.get_logger().warn("SINGULARITY WARNING: Robot stopped to avoid singularity")
 
     def control_to_pos(self, p_set):
         try:
@@ -254,7 +254,7 @@ class ControllerNode(Node):
             error_norm = np.linalg.norm(error)
             
             if error_norm <= 0.001:
-                self.get_logger().info("✓ TARGET REACHED")
+                self.get_logger().info("TARGET REACHED")
                 self.publish_status("TARGET_REACHED")
                 self.controller_state = "IDLE"
                 self.reset_stagnation_detection()

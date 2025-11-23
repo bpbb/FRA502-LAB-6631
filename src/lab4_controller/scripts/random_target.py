@@ -45,10 +45,6 @@ class RandomPoseGenerator(Node):
         # Workspace bounds
         self.r_min = abs(L2 - L3)  # 0.03m
         self.r_max = L2 + L3  # 0.53m
-
-        # Ground collision parameters
-        self.ground_level = 0.02
-        self.safety_margin = 0.001
         
         # Robot model for IK checking
         self.robot = rtb.DHRobot(
@@ -175,20 +171,7 @@ class RandomPoseGenerator(Node):
                 
                 if position_error > 0.002:  # 2mm tolerance
                     continue  # FK doesn't match target
-                
-                # Check ground collision for this solution
-                # Link2 position
-                T1 = self.robot.fkine([q[0], q[1], 0])
-                link2_z = T1.t[2]
-                
-                # Link3 position (use verified FK result)
-                link3_z = pos_check[2]
-                
-                # Safety threshold
-                threshold = self.ground_level + self.safety_margin
-                
-                # Check this solution is safe
-                if link2_z >= threshold and link3_z >= threshold:
+                else:
                     safe_solutions_found += 1
             
             # Require at least one safe solution
