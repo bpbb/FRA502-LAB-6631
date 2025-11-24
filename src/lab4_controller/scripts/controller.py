@@ -56,6 +56,7 @@ class ControllerNode(Node):
         self.q = np.array([0.0, 0.0, 0.0])
         self.r_max = 0.53
         self.r_min = 0.03
+        self.z_min = 0.02  # Minimum height above ground (2cm safety margin)
         
         # Target setpoints
         self.ik_setpoint = [0, 0, 0]
@@ -127,20 +128,36 @@ class ControllerNode(Node):
         self.reset_stagnation_detection()
 
         if self.controller_state == "AUTO":
+            target_z = float(request.target_pose.pose.position.z)
+            if target_z < self.z_min:
+                self.get_logger().error(f"AUTO target rejected: z={target_z:.3f}m below ground limit {self.z_min}m")
+                response.success = False
+                response.message = f"Target below ground (z={target_z:.3f}m)"
+                self.controller_state = "IDLE"
+                return response
+            
             self.random_setpoint = [
                 float(request.target_pose.pose.position.x),
                 float(request.target_pose.pose.position.y),
-                float(request.target_pose.pose.position.z),
+                target_z,
             ]
             self.auto_target_reached = False
             self.movement_start_time = time.time()
             self.get_logger().info(f"AUTO mode: Target [{self.random_setpoint[0]:.3f}, {self.random_setpoint[1]:.3f}, {self.random_setpoint[2]:.3f}]")
             
         elif self.controller_state == "IK":
+            target_z = float(request.target_pose.pose.position.z)
+            if target_z < self.z_min:
+                self.get_logger().error(f"IK target rejected: z={target_z:.3f}m below ground limit {self.z_min}m")
+                response.success = False
+                response.message = f"Target below ground (z={target_z:.3f}m)"
+                self.controller_state = "IDLE"
+                return response
+            
             self.ik_setpoint = [
                 float(request.target_pose.pose.position.x),
                 float(request.target_pose.pose.position.y),
-                float(request.target_pose.pose.position.z),
+                target_z,
             ]
             self.movement_start_time = time.time()
             self.get_logger().info(f"IK mode: Target [{self.ik_setpoint[0]:.3f}, {self.ik_setpoint[1]:.3f}, {self.ik_setpoint[2]:.3f}]")
@@ -277,8 +294,16 @@ class ControllerNode(Node):
             N = np.eye(3) - J_pinv @ J
             
             q_dot_total = q_dot + N @ q_dot_null
-            self.q = self.q + q_dot_total / self.frequency
-            self.q = np.clip(self.q, self.q_min, self.q_max)
+            q_new = self.q + q_dot_total / self.frequency
+            q_new = np.clip(q_new, self.q_min, self.q_max)
+            
+            # Ground collision check - verify new position stays above ground
+            T_new = self.robot.fkine(q_new)
+            if T_new.t[2] < self.z_min:
+                self.get_logger().warn(f"Ground collision prevented at z={T_new.t[2]:.3f}m")
+                return True  # Don't update joints, but continue running
+            
+            self.q = q_new
 
             self.publish_joint_state(self.q)
             return True
@@ -318,8 +343,16 @@ class ControllerNode(Node):
             N = np.eye(3) - J_inv @ J
             q_dot_total = q_dot + N @ q_dot_null
             
-            self.q = self.q + q_dot_total / self.frequency
-            self.q = np.clip(self.q, self.q_min, self.q_max)
+            q_new = self.q + q_dot_total / self.frequency
+            q_new = np.clip(q_new, self.q_min, self.q_max)
+            
+            # Ground collision check - verify new position stays above ground
+            T_new = self.robot.fkine(q_new)
+            if T_new.t[2] < self.z_min:
+                self.get_logger().warn(f"Ground collision prevented at z={T_new.t[2]:.3f}m")
+                return True  # Don't update joints, but continue running
+            
+            self.q = q_new
             
             self.publish_joint_state(self.q)
             return True

@@ -120,8 +120,8 @@ class RandomPoseGenerator(Node):
         if R < 0.08:
             return False
         
-        # Minimum z height (well above ground)
-        if z < 0.05:
+        # Minimum z height (well above ground - consistent with controller)
+        if z < 0.02:
             return False
         
         # Maximum z height (avoid overhead configurations)
